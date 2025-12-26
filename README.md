@@ -172,12 +172,3 @@ This project demonstrates:
 - User-centered design
 - Scalable architecture
 
-## 📝 License
-
-This project is created for SOSC Challenge 3 - Second Years.
-
----
-
-**Developed with ❤️ for SOSC Challenge 3**
-
-*Demonstrating technical excellence, innovation, and practical problem-solving skills.*
