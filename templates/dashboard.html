@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Finance Assistant - Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <nav class="sidebar">
+            <div class="logo">
+                <h2>🤖 AI Finance</h2>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/" class="active">📊 Dashboard</a></li>
+                <li><a href="/analytics">📈 Analytics</a></li>
+                <li><a href="/ai_insights">🧠 AI Insights</a></li>
+                <li><a href="/goals">🎯 Goals</a></li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <h1>Financial Dashboard</h1>
+                <div class="balance-card">
+                    <span class="balance-label">Current Balance</span>
+                    <span class="balance-amount ${{'positive' if balance >= 0 else 'negative'}}">
+                        ${{ "%.2f"|format(balance) }}
+                    </span>
+                </div>
+            </header>
+
+            <div class="dashboard-grid">
+                <!-- Quick Stats -->
+                <section class="stats-section">
+                    <div class="stat-card income">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-info">
+                            <h3>Total Income</h3>
+                            <p>${{ "%.2f"|format(total_income) }}</p>
+                        </div>
+                    </div>
+                    <div class="stat-card expense">
+                        <div class="stat-icon">💸</div>
+                        <div class="stat-info">
+                            <h3>Total Expenses</h3>
+                            <p>${{ "%.2f"|format(total_expenses) }}</p>
+                        </div>
+                    </div>
+                    <div class="stat-card savings">
+                        <div class="stat-icon">🏦</div>
+                        <div class="stat-info">
+                            <h3>Savings Rate</h3>
+                            <p>{{ "%.1f"|format((balance/total_income*100) if total_income > 0 else 0) }}%</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Add Transaction -->
+                <section class="add-transaction">
+                    <h2>Quick Add Transaction</h2>
+                    <form id="transactionForm">
+                        <div class="form-row">
+                            <input type="number" id="amount" placeholder="Amount" step="0.01" required>
+                            <select id="type" required>
+                                <option value="expense">Expense</option>
+                                <option value="income">Income</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <select id="category" required>
+                                <option value="food">🍔 Food</option>
+                                <option value="transport">🚗 Transport</option>
+                                <option value="entertainment">🎬 Entertainment</option>
+                                <option value="shopping">🛍️ Shopping</option>
+                                <option value="bills">📄 Bills</option>
+                                <option value="health">🏥 Health</option>
+                                <option value="salary">💼 Salary</option>
+                                <option value="other">📦 Other</option>
+                            </select>
+                            <input type="text" id="description" placeholder="Description" required>
+                        </div>
+                        <button type="submit" class="add-btn">Add Transaction</button>
+                    </form>
+                    <div id="aiResponse" class="ai-response"></div>
+                </section>
+
+                <!-- Spending Chart -->
+                <section class="chart-section">
+                    <h2>Spending by Category</h2>
+                    <canvas id="spendingChart"></canvas>
+                </section>
+
+                <!-- Recent Transactions -->
+                <section class="transactions-section">
+                    <h2>Recent Transactions</h2>
+                    <div class="transactions-list">
+                        {% for transaction in transactions %}
+                        <div class="transaction-item {{ transaction[4] }}">
+                            <div class="transaction-info">
+                                <span class="transaction-desc">{{ transaction[3] }}</span>
+                                <span class="transaction-category">{{ transaction[2] }}</span>
+                                <span class="transaction-date">{{ transaction[5][:10] }}</span>
+                            </div>
+                            <div class="transaction-amount {{ transaction[4] }}">
+                                {{ '+' if transaction[4] == 'income' else '-' }}${{ "%.2f"|format(transaction[1]) }}
+                            </div>
+                            {% if transaction[6] %}
+                            <div class="ai-tag">AI: {{ transaction[6] }}</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <!-- Goals Progress -->
+                <section class="goals-section">
+                    <h2>Financial Goals</h2>
+                    <div class="goals-list">
+                        {% for goal in goals %}
+                        <div class="goal-item">
+                            <div class="goal-info">
+                                <h4>{{ goal[1] }}</h4>
+                                <p>Target: ${{ "%.2f"|format(goal[2]) }}</p>
+                            </div>
+                            <div class="goal-progress">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: {{ (goal[3]/goal[2]*100) if goal[2] > 0 else 0 }}%"></div>
+                                </div>
+                                <span>{{ "%.1f"|format((goal[3]/goal[2]*100) if goal[2] > 0 else 0) }}%</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <!-- AI Insights Preview -->
+                <section class="ai-preview">
+                    <h2>🤖 AI Insights</h2>
+                    <div id="aiInsights" class="insights-preview">
+                        <div class="loading">Analyzing your financial patterns...</div>
+                    </div>
+                    <a href="/ai_insights" class="view-all-btn">View All Insights</a>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Initialize spending chart
+        const ctx = document.getElementById('spendingChart').getContext('2d');
+        const spendingData = {{ spending_by_category | tojsonfilter }};
+        
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: spendingData.map(item => item[0]),
+                datasets: [{
+                    data: spendingData.map(item => item[1]),
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+                        '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+
+        // Handle transaction form
+        document.getElementById('transactionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                amount: document.getElementById('amount').value,
+                type: document.getElementById('type').value,
+                category: document.getElementById('category').value,
+                description: document.getElementById('description').value
+            };
+
+            try {
+                const response = await axios.post('/add_transaction', formData);
+                
+                if (response.data.status === 'success') {
+                    document.getElementById('aiResponse').innerHTML = `
+                        <div class="ai-success">
+                            ✅ Transaction added! 
+                            <br>AI Category: ${response.data.ai_category}
+                            <br>Risk Score: ${response.data.risk_score}/1.0
+                        </div>
+                    `;
+                    
+                    // Reset form
+                    document.getElementById('transactionForm').reset();
+                    
+                    // Reload page after 2 seconds
+                    setTimeout(() => location.reload(), 2000);
+                }
+            } catch (error) {
+                document.getElementById('aiResponse').innerHTML = `
+                    <div class="ai-error">❌ Error adding transaction</div>
+                `;
+            }
+        });
+
+        // Load AI insights preview
+        async function loadAIInsights() {
+            try {
+                const response = await axios.get('/ai_insights');
+                // This would need to be implemented as an API endpoint
+                document.getElementById('aiInsights').innerHTML = `
+                    <div class="insight-item">
+                        💡 Your spending pattern shows potential savings of $150/month
+                    </div>
+                    <div class="insight-item">
+                        📈 Entertainment expenses increased 25% this month
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('aiInsights').innerHTML = `
+                    <div class="insight-item">🤖 Add more transactions to get AI insights</div>
+                `;
+            }
+        }
+
+        // Load insights on page load
+        loadAIInsights();
+    </script>
+</body>
+</html>
