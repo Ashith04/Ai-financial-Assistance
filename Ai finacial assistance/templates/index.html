@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Task Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 Smart Task Manager</h1>
+            <nav>
+                <a href="/">Tasks</a>
+                <a href="/analytics">Analytics</a>
+                <a href="/ai_insights">AI Insights</a>
+            </nav>
+        </header>
+
+        <main>
+            <section class="add-task">
+                <h2>Add New Task</h2>
+                <form method="POST" action="/add_task">
+                    <input type="text" name="title" placeholder="Task title" required>
+                    <textarea name="description" placeholder="Description (optional)"></textarea>
+                    <select name="priority">
+                        <option value="1">Low Priority</option>
+                        <option value="2">Medium Priority</option>
+                        <option value="3">High Priority</option>
+                    </select>
+                    <button type="submit">Add Task</button>
+                </form>
+            </section>
+
+            <section class="tasks">
+                <h2>Your Tasks</h2>
+                <div class="task-list">
+                    {% for task in tasks %}
+                    <div class="task-item priority-{{ task[3] }} {% if task[4] == 'completed' %}completed{% endif %}">
+                        <div class="task-content">
+                            <h3>{{ task[1] }}</h3>
+                            {% if task[2] %}
+                            <p>{{ task[2] }}</p>
+                            {% endif %}
+                            <small>Created: {{ task[5][:16] }}</small>
+                        </div>
+                        <div class="task-actions">
+                            {% if task[4] == 'pending' %}
+                            <a href="/complete_task/{{ task[0] }}" class="complete-btn">✓ Complete</a>
+                            {% else %}
+                            <span class="completed-badge">✓ Done</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

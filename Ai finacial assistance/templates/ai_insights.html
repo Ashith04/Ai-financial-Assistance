@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Insights - Finance Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <nav class="sidebar">
+            <div class="logo">
+                <h2>🤖 AI Finance</h2>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/">📊 Dashboard</a></li>
+                <li><a href="/analytics">📈 Analytics</a></li>
+                <li><a href="/ai_insights" class="active">🧠 AI Insights</a></li>
+                <li><a href="/goals">🎯 Goals</a></li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <h1>🤖 AI Financial Insights</h1>
+                <div class="ai-status">
+                    <span class="status-indicator active"></span>
+                    AI Analysis Active
+                </div>
+            </header>
+
+            <div class="insights-grid">
+                <!-- Pattern Analysis -->
+                <section class="insights-section">
+                    <h2>🔍 Pattern Analysis</h2>
+                    <div class="insights-list">
+                        {% for insight in insights %}
+                        <div class="insight-card {{ insight.type }}">
+                            <div class="insight-header">
+                                <span class="confidence">{{ "%.0f"|format(insight.confidence * 100) }}% confidence</span>
+                            </div>
+                            <p>{{ insight.message }}</p>
+                            {% if insight.category %}
+                            <div class="insight-tag">Category: {{ insight.category }}</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <!-- Financial Predictions -->
+                <section class="predictions-section">
+                    <h2>📈 Financial Predictions</h2>
+                    <div class="predictions-list">
+                        {% for prediction in predictions %}
+                        <div class="prediction-card {{ prediction.type }}">
+                            <p>{{ prediction.message }}</p>
+                            {% if prediction.predicted_amount %}
+                            <div class="prediction-amount">
+                                Predicted: ${{ "%.2f"|format(prediction.predicted_amount) }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <!-- Smart Recommendations -->
+                <section class="recommendations-section">
+                    <h2>💡 Smart Recommendations</h2>
+                    <div class="recommendations-list">
+                        {% for rec in recommendations %}
+                        <div class="recommendation-card {{ rec.type }}">
+                            <p>{{ rec.message }}</p>
+                            {% if rec.potential_savings %}
+                            <div class="savings-potential">
+                                Potential Savings: ${{ "%.2f"|format(rec.potential_savings) }}
+                            </div>
+                            {% endif %}
+                            {% if rec.monthly_target %}
+                            <div class="monthly-target">
+                                Monthly Target: ${{ "%.2f"|format(rec.monthly_target) }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <!-- Spending Forecast -->
+                <section class="forecast-section">
+                    <h2>🔮 6-Month Spending Forecast</h2>
+                    <canvas id="forecastChart"></canvas>
+                    <div class="forecast-controls">
+                        <button onclick="loadForecast()" class="refresh-btn">🔄 Refresh Forecast</button>
+                    </div>
+                </section>
+
+                <!-- Budget Optimization -->
+                <section class="optimization-section">
+                    <h2>⚡ Budget Optimization</h2>
+                    <div id="optimizationResults" class="optimization-results">
+                        <div class="loading">Calculating optimal budget allocation...</div>
+                    </div>
+                </section>
+
+                <!-- Risk Assessment -->
+                <section class="risk-section">
+                    <h2>⚠️ Financial Risk Assessment</h2>
+                    <div class="risk-meter">
+                        <div class="risk-gauge">
+                            <div class="gauge-fill" id="riskGauge"></div>
+                        </div>
+                        <div class="risk-level" id="riskLevel">Calculating...</div>
+                    </div>
+                    <div class="risk-factors">
+                        <h3>Risk Factors:</h3>
+                        <ul id="riskFactors">
+                            <li>Analyzing spending patterns...</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <!-- AI Chat Assistant -->
+                <section class="ai-chat-section">
+                    <h2>💬 Ask AI Assistant</h2>
+                    <div class="chat-container">
+                        <div class="chat-messages" id="chatMessages">
+                            <div class="ai-message">
+                                👋 Hi! I'm your AI financial assistant. Ask me anything about your finances!
+                            </div>
+                        </div>
+                        <div class="chat-input">
+                            <input type="text" id="chatInput" placeholder="Ask about your spending, savings, or financial goals...">
+                            <button onclick="sendMessage()" class="send-btn">Send</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Load spending forecast
+        async function loadForecast() {
+            try {
+                const response = await axios.get('/api/spending_forecast');
+                const data = response.data;
+                
+                if (data.error) {
+                    document.getElementById('forecastChart').style.display = 'none';
+                    return;
+                }
+
+                const ctx = document.getElementById('forecastChart').getContext('2d');
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+                
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: months,
+                        datasets: [{
+                            label: 'Predicted Spending',
+                            data: data.forecast,
+                            borderColor: '#36A2EB',
+                            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'AI-Powered Spending Forecast'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '$' + value.toFixed(0);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading forecast:', error);
+            }
+        }
+
+        // Load budget optimization
+        async function loadOptimization() {
+            try {
+                const response = await axios.get('/api/budget_optimization');
+                const data = response.data;
+                
+                let html = '<div class="optimization-grid">';
+                data.forEach(item => {
+                    html += `
+                        <div class="optimization-item">
+                            <h4>${item.category}</h4>
+                            <div class="current">Current: $${item.current_spending.toFixed(2)}</div>
+                            <div class="suggested">Suggested: $${item.suggested_budget.toFixed(2)}</div>
+                            <div class="savings">Save: $${item.potential_savings.toFixed(2)}</div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                
+                document.getElementById('optimizationResults').innerHTML = html;
+            } catch (error) {
+                document.getElementById('optimizationResults').innerHTML = 
+                    '<div class="error">Unable to load optimization data</div>';
+            }
+        }
+
+        // Calculate and display risk assessment
+        function calculateRisk() {
+            // Simulate risk calculation
+            const riskScore = Math.random() * 100;
+            const riskGauge = document.getElementById('riskGauge');
+            const riskLevel = document.getElementById('riskLevel');
+            const riskFactors = document.getElementById('riskFactors');
+            
+            riskGauge.style.width = riskScore + '%';
+            
+            let level, color;
+            if (riskScore < 30) {
+                level = 'Low Risk';
+                color = '#4CAF50';
+            } else if (riskScore < 70) {
+                level = 'Medium Risk';
+                color = '#FF9800';
+            } else {
+                level = 'High Risk';
+                color = '#F44336';
+            }
+            
+            riskLevel.textContent = level;
+            riskGauge.style.backgroundColor = color;
+            
+            // Add risk factors
+            const factors = [
+                'High entertainment spending',
+                'Irregular income pattern',
+                'Low emergency fund',
+                'High debt-to-income ratio'
+            ];
+            
+            riskFactors.innerHTML = factors.slice(0, Math.floor(riskScore/25) + 1)
+                .map(factor => `<li>${factor}</li>`).join('');
+        }
+
+        // AI Chat functionality
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const messages = document.getElementById('chatMessages');
+            
+            if (!input.value.trim()) return;
+            
+            // Add user message
+            messages.innerHTML += `
+                <div class="user-message">${input.value}</div>
+            `;
+            
+            // Simulate AI response
+            setTimeout(() => {
+                const responses = [
+                    "Based on your spending patterns, I recommend reducing entertainment expenses by 15%.",
+                    "Your savings rate is excellent! Consider investing in a diversified portfolio.",
+                    "I notice irregular spending in the shopping category. Try setting a monthly budget.",
+                    "Your income is stable. Focus on building an emergency fund of 6 months expenses."
+                ];
+                
+                const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                messages.innerHTML += `
+                    <div class="ai-message">🤖 ${randomResponse}</div>
+                `;
+                
+                messages.scrollTop = messages.scrollHeight;
+            }, 1000);
+            
+            input.value = '';
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        // Enter key for chat
+        document.getElementById('chatInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Initialize everything
+        document.addEventListener('DOMContentLoaded', function() {
+            loadForecast();
+            loadOptimization();
+            calculateRisk();
+        });
+    </script>
+</body>
+</html>
